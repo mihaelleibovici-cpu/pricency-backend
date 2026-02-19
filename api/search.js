@@ -1,30 +1,35 @@
-const axios = require('axios');
+import axios from 'axios';
 
-module.exports = async (req, res) => {
-    // הגדרות אבטחה שמאפשרות לאתר שלך לגשת לנתונים
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export default async function handler(req, res) {
+  // שחרור חסימת הגישה מהאתר שלך
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
-    // שליפת מילת החיפוש מהכתובת
-    const { q } = req.query;
-    
-    // המפתח הסודי שלך - עכשיו הוא מוגן בתוך השרת
-    const API_KEY = "f93468b7cf17169a9dd3584bc3c91fe10947b64b19e0cf52266a0aaa35775903";
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
-    if (!q) {
-        return res.status(400).json({ error: "נא להזין מוצר לחיפוש" });
-    }
+  const { q } = req.query;
+  const apiKey = process.env.SERPAPI_API_KEY;
 
-    try {
-        // פנייה ל-SerpApi כדי להביא מחירים מ-Google Shopping
-        const url = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(q)}&hl=he&gl=il&api_key=${API_KEY}`;
-        const response = await axios.get(url);
-        
-        // שליחת התוצאות בחזרה לאתר שלך
-        res.status(200).json(response.data);
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: "שגיאה במשיכת הנתונים מהשרת" });
-    }
-};
+  try {
+    const response = await axios.get('https://serpapi.com/search', {
+      params: {
+        engine: "google",
+        q: q,
+        api_key: apiKey,
+        hl: "he",
+        gl: "il"
+      }
+    });
+    res.status(200).json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch results" });
+  }
+}
